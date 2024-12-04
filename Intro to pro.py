@@ -1,69 +1,74 @@
-def text_to_bin(text):
+def text_to_bin(text):  # Convert text to binary
     return ''.join(format(ord(char), '08b') for char in text)
 
-def bin_to_text(binary):
-    message = ''.join(chr(int(binary[i:8+i], 2))for i in range(0, len(binary), 8))
+def bin_to_text(binary):  # Convert binary back to text
+    message = ''.join(chr(int(binary[i:8+i], 2)) for i in range(0, len(binary), 8))
+    return message
 
-def add_text(image_path, output_path, message):
+def add_txt(image_location, output_path, message):  # Embed text into image
     binary_msg = text_to_bin(message) + '1111111111110'
-    with open(image_path, 'rb') as file:
-        image_data = bytearray(file.read())
+    with open(image_location, 'rb') as file:
+        image_info = bytearray(file.read())
+    index = 0
+    for i in range(len(image_info)):
+        if index < len(binary_msg):
+            image_info[i] = (image_info[i] & 0xFE) | int(binary_msg[index])
+            index += 1
+        else:
+            break
+    with open(output_path, 'wb') as file:
+        file.write(image_info)
 
-        index = 0
-        for i in range(len(image_data)):
-            if index < len(binary_msg):
-                image_data[i] = (image_data[i] & 0xFE) | int(binary_msg[index])
-            else:
-                break
-        with open(output_path, 'wb') as file:
-            file.write(image_data)
-
-
-def extract_text(image_path):
-    with open(image_path, 'rb') as file:
+def extract_msg(image_location):  # Extract message from image
+    with open(image_location, 'rb') as file:
         binary_topic = file.read()
     binary = ''
     for byte in binary_topic:
-        digit = bin(byte)[-1]
+        digit = bin(byte)[-1]  # Extract the least significant bit
         binary += digit
-        if binary[:-16] == '11111111111110':
+        if binary.endswith('1111111111110'):  # Check for end-marker
             break
-        if '11111111111110' not in binary:
-            print("debug: delimeter not found.")
-            raise ValueError("not found.")
-        if len(binary) % 8 !=0:
-            raise ValueError("Error: Length not divisble by 8.")
-        
+
+    if '1111111111110' not in binary:
+        raise ValueError("End-marker not found in the binary data.")
+
+    # Remove the delimiter
+    binary = binary[:binary.index('1111111111110')]
+
+    # Ensure binary length is a multiple of 8
+    if len(binary) % 8 != 0:
+        raise ValueError("Binary data length is not divisible by 8 after removing the end-marker.")
+
     return bin_to_text(binary)
-print(extract_text('D:/nature.bmp')) 
-                   
-def test_image(input_image, output_image):
+
+def testing_image(input_image, output_image):
     with open(input_image, 'rb') as file:
-        image_data = bytearray(file.read())
+        image_info = bytearray(file.read())
     for i in range(10):
-        image_data[i] = (image_data[i] + 1) % 256
+        image_info[i] = (image_info[i] + 1) % 256
     with open(output_image, 'wb') as file:
-        file.write(image_data)
-    print(f"test image{output_image}")
+        file.write(image_info)
+    print(f"Test image written to {output_image}")
 
-if __name__ == '__main__':
-    input_image = 'image.bmp'
-    output_image = 'output.bmp'
-    test_image = 'test_output.bmp'
+def new_func(add_txt, extract_msg, testing_image, input_image, output_image, test_image_path):
+    print("Testing the image writing...")
+    testing_image(input_image, test_image_path)
 
-    print("testing the image writing...")
-    test_image(input_image, testing_image)
-    
-    message = "hello, World!"
+    message = "Hello, World!"
     print(f"Embed message: {message}")
-    add_text(input_image, output_image, message)
-    print(f"message is embedded in{output_image}")
+    add_txt(input_image, output_image, message)
+    print(f"Message is embedded in {output_image}")
 
-    print("extracting hidden message...")
+    print("Extracting hidden message...")
     try:
-        hidden_message = extracting_text(output_image)
-        print(f"extrcated message: {hidden_message}")
+        hidden_message = extract_msg(output_image)
+        print(f"Extracted message: {hidden_message}")
     except ValueError as e:
         print(f"Error: {e}")
 
+if __name__ == '__main__':
+    input_image = 'nature.bmp'
+    output_image = 'output.bmp'
+    test_image_path = 'test_output.bmp'
+    new_func(add_txt, extract_msg, testing_image, input_image, output_image, test_image_path)
 
